@@ -165,7 +165,9 @@ export default function Home() {
           <h2 className="text-xl font-bold text-white">AI Insight</h2>
         </div>
         <p className="text-sm text-gray-400 mb-4">
-          Ask the model to explain the current regime and predictions.
+          Ask the AI to explain the current market regime, how it has behaved
+          historically, and how that compares to the model&apos;s current next-day
+          probability for SPY.
         </p>
         <div className="space-y-4">
           <textarea
