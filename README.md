@@ -2,6 +2,9 @@
 
 End-to-end ML pipeline and interactive dashboard for stock market regime detection and next-day SPY direction prediction.
 
+youtube video link: https://youtu.be/S3v3dHrBXiw
+app link: https://market-regime-explorer-s54k.vercel.app/
+
 ## Overview
 
 Market Regime Explorer is a comprehensive machine learning project that analyzes daily price data from multiple ETFs (SPY, QQQ, DIA, IWM, XLK, XLF, XLV) to identify distinct market regimes and predict whether the SPY ETF will close up or down on the next trading day.
