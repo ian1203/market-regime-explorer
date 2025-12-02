@@ -1,0 +1,10 @@
+yfinance
+pandas
+numpy
+scikit-learn
+matplotlib
+seaborn
+fastparquet
+fastapi
+uvicorn
+apscheduler
