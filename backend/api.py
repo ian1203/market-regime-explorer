@@ -80,12 +80,15 @@ def _reload_pipeline(reload_data: bool = False) -> None:
     try:
         # Handle paths for both repo root and backend/ directory execution
         backend_dir = Path(__file__).parent
-        # If running from backend/, go up one level; if from root, stay at root
-        if (backend_dir / "api.py").exists() and (backend_dir.parent / "data").exists():
-            project_root = backend_dir.parent
+        # Try repo root first (when running from repo root)
+        if (backend_dir.parent / "data" / "stocks_raw.csv").exists():
+            csv_path = backend_dir.parent / "data" / "stocks_raw.csv"
+        # Fallback to backend/data/ (when running from backend/ on Railway)
+        elif (backend_dir / "data" / "stocks_raw.csv").exists():
+            csv_path = backend_dir / "data" / "stocks_raw.csv"
+        # Default to repo root data/ (will download if missing)
         else:
-            project_root = backend_dir
-        csv_path = project_root / "data" / "stocks_raw.csv"
+            csv_path = backend_dir.parent / "data" / "stocks_raw.csv"
         
         if reload_data:
             logger.info("Downloading fresh data from Yahoo Finance...")

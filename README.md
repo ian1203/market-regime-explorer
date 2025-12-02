@@ -73,6 +73,8 @@ The backend will be available at `http://localhost:8000`
 
 ### Frontend
 
+**⚠️ Important: Always run Next.js commands from the `frontend/` directory!**
+
 ```bash
 cd frontend
 npm install
@@ -80,6 +82,8 @@ npm run dev
 ```
 
 The frontend will be available at `http://localhost:3000`
+
+**Note**: If you see errors about missing `pages/` directory, make sure you're running the command from inside `frontend/`, not from the repo root.
 
 **Environment Variables** (optional):
 - `NEXT_PUBLIC_API_BASE_URL` - Backend API URL (defaults to `http://localhost:8000`)
