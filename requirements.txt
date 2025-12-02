@@ -8,3 +8,4 @@ fastparquet
 fastapi
 uvicorn
 apscheduler
+openai>=1.0.0

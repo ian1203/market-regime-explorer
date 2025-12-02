@@ -104,3 +104,26 @@ export async function triggerRefresh(): Promise<void> {
   }
 }
 
+export async function askLLM(question: string | null): Promise<string> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/llm/explain`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ question }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`LLM API error: ${res.status} – ${text}`);
+    }
+    const json = await res.json();
+    return json.answer as string;
+  } catch (err) {
+    if (err instanceof TypeError && err.message.includes('fetch')) {
+      throw new Error(`Network error: Could not connect to ${API_BASE_URL}. Is the backend running?`);
+    }
+    throw err;
+  }
+}
+

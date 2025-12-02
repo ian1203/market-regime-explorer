@@ -11,8 +11,10 @@ import numpy as np
 from pathlib import Path
 import logging
 import warnings
+import os
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
+from openai import OpenAI
 
 from backend.models import run_full_pipeline, download_full_history
 
@@ -55,6 +57,10 @@ SPLITS = None
 
 # Initialize scheduler (will be started in on_startup)
 scheduler = AsyncIOScheduler()
+
+# Initialize OpenAI client (reads from environment variable)
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
 
 def _reload_pipeline(reload_data: bool = False) -> None:
@@ -153,6 +159,14 @@ class PCAScatterPoint(BaseModel):
 
 class PCAScatterResponse(BaseModel):
     data: List[PCAScatterPoint]
+
+
+class LLMExplainRequest(BaseModel):
+    question: Optional[str] = None
+
+
+class LLMExplainResponse(BaseModel):
+    answer: str
 
 
 class RefreshResponse(BaseModel):
@@ -358,4 +372,93 @@ def refresh_pipeline():
         # Make it easy to debug from the frontend or logs
         logger.error(f"Error in manual refresh: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/llm/explain", response_model=LLMExplainResponse)
+def llm_explain(payload: LLMExplainRequest):
+    """
+    Use an LLM to generate an explanation/insight about the current market regime
+    and model output.
+    - If payload.question is provided, use it as the user question.
+    - If no question is provided, generate a default explanation.
+    """
+    if PIPELINE_RESULT is None or SPLITS is None:
+        raise HTTPException(status_code=500, detail="Pipeline not loaded")
+    if client is None:
+        raise HTTPException(status_code=500, detail="OPENAI_API_KEY not set on the backend")
+    
+    # Extract key summary info
+    models_info = PIPELINE_RESULT["models_info"]
+    best_model_name = models_info["best_model_name"]
+    cluster_stats = PIPELINE_RESULT["cluster_stats"]
+    dates_test = SPLITS["dates_test"]
+    latest_date = dates_test[-1].strftime("%Y-%m-%d")
+    latest_regime = int(PIPELINE_RESULT["cluster_test"][-1])
+    
+    # Get latest prediction probability
+    X_test_scaled = SPLITS["X_test_scaled"]
+    X_test_pca = SPLITS["X_test_pca"]
+    latest_idx = len(dates_test) - 1
+    
+    if best_model_name in ["logreg_pca", "rf_pca"]:
+        latest_pred_prob = float(BEST_MODEL.predict_proba(X_test_pca[latest_idx:latest_idx+1])[0, 1])
+    else:
+        latest_pred_prob = float(BEST_MODEL.predict_proba(X_test_scaled[latest_idx:latest_idx+1])[0, 1])
+    
+    # Build a compact textual summary of cluster stats
+    cluster_lines = []
+    for _, row in cluster_stats.iterrows():
+        cluster_lines.append(
+            f"Cluster {int(row['cluster_id'])}: n_days={int(row['n_days'])}, "
+            f"mean_daily_return={row['mean_daily_return']:.4f}, prob_up={row['prob_up']:.3f}"
+        )
+    cluster_summary_text = "\n".join(cluster_lines)
+    
+    user_question = payload.question.strip() if payload.question else ""
+    if not user_question:
+        user_question = (
+            "Explain in simple but precise terms what the current market regime means, "
+            "how it compares to the other regimes, and how I should interpret the "
+            "next-day probability of SPY going up. Avoid financial advice; just "
+            "explain the patterns and model output."
+        )
+    
+    system_prompt = (
+        "You are an assistant helping a data science student explain a market-regime "
+        "detection project. The model looks at multiple ETFs, extracts features, does "
+        "PCA + KMeans to find regimes, and then predicts whether SPY will close up "
+        "tomorrow. Use clear, technically correct language, but keep it understandable. "
+        "Do NOT give investment advice; focus on interpreting regimes and probabilities."
+    )
+    
+    project_context = (
+        f"Best model: {best_model_name}\n"
+        f"Latest test date: {latest_date}\n"
+        f"Current regime (cluster id): {latest_regime}\n"
+        f"Next-day probability that SPY closes up: {latest_pred_prob:.3f}\n"
+        f"Cluster statistics:\n{cluster_summary_text}\n"
+    )
+    
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            temperature=0.2,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {
+                    "role": "user",
+                    "content": (
+                        "Here is the current model context:\n"
+                        f"{project_context}\n\n"
+                        f"My question: {user_question}"
+                    ),
+                },
+            ],
+        )
+        answer = response.choices[0].message.content
+    except Exception as e:
+        logger.error(f"LLM call failed: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"LLM call failed: {e}")
+    
+    return LLMExplainResponse(answer=answer)
 
