@@ -44,3 +44,7 @@ yarn-error.log*
 # Build artifacts
 *.log
 .cache/
+
+# Data files - stocks_raw.csv is tracked, but other data files are ignored
+data/*.parquet
+# Note: data/stocks_raw.csv is intentionally tracked in git
