@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+pandas
+numpy
+scikit-learn
+yfinance
+openai>=1.0.0
+apscheduler
+python-dotenv
+

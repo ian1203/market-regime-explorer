@@ -14,258 +14,108 @@ The system:
 - Provides a FastAPI backend with RESTful endpoints and a Next.js dashboard with interactive visualizations
 - Includes an LLM-powered AI assistant that explains market regimes and model predictions in plain language
 
+## Project Structure
+
+```
+market-regime-explorer/
+├── backend/          # FastAPI API + ML pipeline
+│   ├── api.py        # FastAPI application
+│   ├── models.py     # ML pipeline functions
+│   └── requirements.txt
+├── frontend/         # Next.js dashboard UI
+│   ├── components/   # React components
+│   ├── pages/        # Next.js pages
+│   ├── lib/          # API client and utilities
+│   └── styles/       # CSS and Tailwind config
+├── data/             # CSV with historical prices
+├── notebooks/        # Exploration notebooks
+└── README.md
+```
+
 ## Features
 
 - **Time-based Data Splitting**: Proper train/validation/test split to avoid data leakage
-  - Training: ≤ 2018-12-31
-  - Validation: 2019-01-02 to 2021-12-31
-  - Test: 2022-01-03 onward
-
 - **Dimensionality Reduction**: PCA with 20 components to capture most variance while reducing noise
-
 - **Market Regime Detection**: K-Means clustering (K=2) on PCA space to identify distinct market regimes
-
-- **Model Comparison**: Multiple models evaluated with comprehensive metrics
-  - Logistic Regression (full features vs PCA-20)
-  - Random Forest (full features vs PCA-20)
-  - Metrics: Accuracy, F1-score, ROC-AUC
-
-- **Interactive Dashboard**:
-  - SPY price vs predicted "up" probability over the test period
-  - PCA scatter plots colored by regime and true label
-  - Regime statistics table (mean returns, probability of up days)
-  - Model performance metrics table
-  - LLM-powered "AI Insight" panel that explains the current regime and predictions
-
+- **Model Comparison**: Multiple models evaluated with comprehensive metrics (Accuracy, F1-score, ROC-AUC)
+- **Interactive Dashboard**: SPY price vs predicted probability, PCA scatter plots, regime statistics, and LLM-powered AI insights
 - **Self-Updating Backend**: Automatic daily refresh at 22:30 UTC via APScheduler, plus manual refresh endpoint
-
 - **Production-Ready API**: FastAPI with CORS, error handling, and structured responses
 
 ## Tech Stack
 
 ### Backend
-- **Python 3.9+**
-- **FastAPI**: RESTful API framework
-- **pandas & numpy**: Data manipulation and numerical computing
-- **scikit-learn**: Machine learning (PCA, K-Means, Logistic Regression, Random Forest)
-- **yfinance**: Yahoo Finance data download
-- **OpenAI API**: LLM-powered explanations (gpt-4o-mini)
-- **APScheduler**: Scheduled daily data refresh
-- **uvicorn**: ASGI server
+- Python 3.9+, FastAPI, pandas, numpy, scikit-learn, yfinance, OpenAI API, APScheduler
 
 ### Frontend
-- **Next.js 14** (Pages Router)
-- **React 18** with TypeScript
-- **TailwindCSS**: Utility-first CSS framework (dark theme)
-- **Recharts**: Data visualization library
-
-### Deployment
-- Backend: Deployable on Render, Railway, or similar (requires `OPENAI_API_KEY` environment variable)
-- Frontend: Deployable on Vercel, Netlify, or similar
-
-## Project Structure
-
-```
-market-regime-explorer/
-├── backend/
-│   ├── api.py          # FastAPI application with endpoints
-│   ├── models.py       # ML pipeline functions
-│   └── __init__.py
-├── data/
-│   └── stocks_raw.csv  # Historical data snapshot
-├── notebooks/
-│   ├── pipeline.ipynb # Jupyter notebook (original development)
-│   └── pipeline.py     # Exported notebook code
-├── pages/
-│   └── index.tsx      # Main dashboard page
-├── components/
-│   ├── Layout.tsx
-│   ├── SummaryCards.tsx
-│   ├── TimeSeriesChart.tsx
-│   ├── PCAScatter.tsx
-│   ├── MetricsTable.tsx
-│   └── ClusterStatsTable.tsx
-├── lib/
-│   └── api/
-│       └── client.ts   # API client with TypeScript types
-├── styles/
-│   └── globals.css    # Global styles and Tailwind setup
-├── requirements.txt   # Python dependencies
-├── package.json       # Node.js dependencies
-└── README.md
-```
+- Next.js 14, React 18, TypeScript, TailwindCSS, Recharts
 
 ## Getting Started
 
-### Prerequisites
-- Python 3.9 or higher
-- Node.js 18+ and npm/yarn
-- OpenAI API key (optional, required for `/llm/explain` endpoint)
+### Backend
 
-### Backend Setup
+```bash
+# Create virtual environment
+python -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 
-1. **Create and activate virtual environment**:
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+# Install dependencies
+pip install -r backend/requirements.txt
 
-2. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+# Run the backend
+uvicorn backend.api:app --reload
+```
 
-3. **Set environment variable** (optional, for LLM endpoint):
-   ```bash
-   export OPENAI_API_KEY="your-api-key-here"
-   ```
-   Or create a `.env` file (not tracked in git).
+The backend will be available at `http://localhost:8000`
 
-4. **Run the backend**:
-   ```bash
-   uvicorn backend.api:app --reload --port 8000
-   ```
+**Environment Variables** (optional, for LLM endpoint):
+- `OPENAI_API_KEY` - Required for `/llm/explain` endpoint
 
-   The backend will:
-   - Load existing data from `data/stocks_raw.csv`
-   - Run the full ML pipeline on startup
-   - Schedule daily refresh at 22:30 UTC
-   - Expose API endpoints at `http://localhost:8000`
+### Frontend
 
-### Frontend Setup
+```bash
+cd frontend
+npm install
+npm run dev
+```
 
-1. **Install dependencies**:
-   ```bash
-   npm install
-   # or
-   yarn install
-   ```
+The frontend will be available at `http://localhost:3000`
 
-2. **Set environment variable** (optional, if backend is not on localhost:8000):
-   ```bash
-   # Create .env.local
-   NEXT_PUBLIC_API_URL=http://localhost:8000
-   ```
+**Environment Variables** (optional):
+- `NEXT_PUBLIC_API_BASE_URL` - Backend API URL (defaults to `http://localhost:8000`)
 
-3. **Run the development server**:
-   ```bash
-   npm run dev
-   # or
-   yarn dev
-   ```
+## Deployment
 
-4. **Open in browser**:
-   Navigate to `http://localhost:3000` (or the port shown in terminal)
+### Backend → Railway
+
+1. Connect your GitHub repository to Railway
+2. Create a new service and point it to the `backend/` directory
+3. Configure:
+   - **Root Directory**: `backend`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn api:app --host 0.0.0.0 --port $PORT`
+4. Set environment variables:
+   - `OPENAI_API_KEY` (required for `/llm/explain`)
+
+### Frontend → Vercel
+
+1. Connect your GitHub repository to Vercel
+2. Configure:
+   - **Root Directory**: `frontend`
+   - **Framework Preset**: Next.js
+3. Set environment variables:
+   - `NEXT_PUBLIC_API_BASE_URL` - Your Railway backend URL (e.g., `https://your-app.railway.app`)
 
 ## API Endpoints
 
-### `GET /`
-Health check endpoint.
+- `GET /` - Health check
+- `GET /summary` - Model metrics, cluster stats, latest predictions
+- `GET /timeseries` - Time series data for test period
+- `GET /pca_scatter` - PCA scatter plot data
+- `POST /refresh` - Manually trigger pipeline refresh
+- `POST /llm/explain` - LLM-powered explanation (requires OPENAI_API_KEY)
 
-**Response**:
-```json
-{
-  "message": "Market Regime Explorer API",
-  "status": "running"
-}
-```
-
-### `GET /summary`
-Returns summary information including best model, metrics, cluster statistics, and latest predictions.
-
-**Response**:
-```json
-{
-  "best_model_name": "rf_pca",
-  "metrics": [
-    {
-      "model": "logreg_full",
-      "accuracy": 0.49,
-      "f1": 0.28,
-      "roc_auc": 0.48
-    },
-    ...
-  ],
-  "cluster_stats": [
-    {
-      "cluster_id": 0,
-      "n_days": 1200,
-      "mean_daily_return": 0.0005,
-      "prob_up": 0.58
-    },
-    ...
-  ],
-  "latest_date": "2024-12-31",
-  "latest_regime": 1,
-  "latest_pred_prob": 0.537
-}
-```
-
-### `GET /timeseries`
-Returns time series data for the test period.
-
-**Response**:
-```json
-{
-  "data": [
-    {
-      "date": "2022-01-03",
-      "spy_price": 470.3,
-      "true_up": 1,
-      "pred_up_prob": 0.52,
-      "cluster": 0
-    },
-    ...
-  ]
-}
-```
-
-### `GET /pca_scatter`
-Returns sampled PCA data for visualization (up to 2000 points).
-
-**Response**:
-```json
-{
-  "data": [
-    {
-      "pc1": -2.3,
-      "pc2": 1.4,
-      "cluster_id": 0,
-      "target_up": 1
-    },
-    ...
-  ]
-}
-```
-
-### `POST /refresh`
-Manually trigger a full pipeline refresh (downloads fresh data and re-runs pipeline).
-
-**Response**:
-```json
-{
-  "status": "ok"
-}
-```
-
-### `POST /llm/explain`
-Get LLM-powered explanation of current market regime and predictions.
-
-**Request**:
-```json
-{
-  "question": "What does the current regime mean?"  // Optional
-}
-```
-
-**Response**:
-```json
-{
-  "answer": "The current market regime (Cluster 1) is characterized by..."
-}
-```
-
-**Note**: Requires `OPENAI_API_KEY` environment variable to be set on the backend.
+See `backend/README_BACKEND.md` for detailed backend documentation.
 
 ## Notes for Recruiters / Professors
 
@@ -290,8 +140,3 @@ The project showcases skills in:
 ## License
 
 This project is for educational and portfolio purposes.
-
-## Contributing
-
-This is a personal portfolio project. Feel free to fork and adapt for your own learning!
-

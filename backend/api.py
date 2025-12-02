@@ -16,7 +16,11 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from openai import OpenAI
 
-from backend.models import run_full_pipeline, download_full_history
+# Support both absolute (from repo root) and relative (from backend/) imports
+try:
+    from backend.models import run_full_pipeline, download_full_history
+except ImportError:
+    from models import run_full_pipeline, download_full_history
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -74,7 +78,13 @@ def _reload_pipeline(reload_data: bool = False) -> None:
     global PIPELINE_RESULT, BEST_MODEL, SCALER, PCA, KMEANS, CLOSE_DF, FEATURES_DF, SPLITS
     
     try:
-        project_root = Path(__file__).parent.parent
+        # Handle paths for both repo root and backend/ directory execution
+        backend_dir = Path(__file__).parent
+        # If running from backend/, go up one level; if from root, stay at root
+        if (backend_dir / "api.py").exists() and (backend_dir.parent / "data").exists():
+            project_root = backend_dir.parent
+        else:
+            project_root = backend_dir
         csv_path = project_root / "data" / "stocks_raw.csv"
         
         if reload_data:
